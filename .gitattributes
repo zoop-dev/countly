@@ -1,0 +1,4 @@
+*.js   filter=stripcomments
+*.mjs  filter=stripcomments
+*.css  filter=stripcomments
+*.html filter=stripcomments
