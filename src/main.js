@@ -12,14 +12,14 @@ import '@material/web/list/list.js'
 import '@material/web/list/list-item.js'
 import { initInstallGate } from 'zoop-kit/install-gate.js'
 import { attachBootLoader, removeBootLoaderImmediately } from 'zoop-kit/boot-loader.js'
-import { zkConfirm, zkPrompt } from 'zoop-kit/dialogs.js'
+import { zkPrompt } from 'zoop-kit/dialogs.js'
 import { showToast } from 'zoop-kit/toast.js'
-import { initUpdateCheck, checkForUpdate } from 'zoop-kit/update-check.js'
-import { maybeShowChangelog, showFullChangelog } from 'zoop-kit/changelog.js'
+import { initUpdateCheck } from 'zoop-kit/update-check.js'
+import { maybeShowChangelog } from 'zoop-kit/changelog.js'
 import { initDesktopWarning } from 'zoop-kit/desktop-warning.js'
-import { showAppSwitcher } from 'zoop-kit/app-switcher.js'
-import { initSavedTheme, showThemePicker } from 'zoop-kit/theme-picker.js'
+import { initSavedTheme, THEMES } from 'zoop-kit/theme-picker.js'
 import { showDatePicker, showTimePicker } from 'zoop-kit/date-time-picker.js'
+import { initSettingsMenu } from 'zoop-kit/settings-menu.js'
 import { wireDragList, DRAG_HANDLE_SVG } from 'zoop-kit/drag-list.js'
 import confetti from 'canvas-confetti'
 import { APP_VERSION, CHANGELOG } from './changelog.js'
@@ -40,14 +40,6 @@ const REPEAT_OPTIONS = [
 ]
 function repeatLabel(key) {
   return REPEAT_OPTIONS.find((o) => o.key === key)?.label || 'Does not repeat'
-}
-
-const THEMES = {
-  sunset: { accent: '#ff6a6a', accentOn: '#2a0505', grad: '#1a0505 0%, #3a0f0f 55%, #c22e2e 100%' },
-  purple: { accent: '#b28dff', accentOn: '#1a1023', grad: '#150a2e 0%, #2c1359 55%, #6a2fd0 100%' },
-  blue: { accent: '#4cc9ff', accentOn: '#04121c', grad: '#0a1330 0%, #123a63 55%, #1c6fd0 100%' },
-  green: { accent: '#2be675', accentOn: '#05170d', grad: '#06170f 0%, #0d3324 55%, #1ed760 100%' },
-  pink: { accent: '#ff6ad5', accentOn: '#26041b', grad: '#1f0518 0%, #430e34 55%, #c22e93 100%' },
 }
 
 let currentThemeKey = initSavedTheme(THEME_KEY, THEMES, 'sunset')
@@ -289,51 +281,6 @@ function renderApp() {
       </div>
     </md-dialog>
 
-    <md-fab id="settings-fab" class="settings-fab" aria-label="Settings">
-      <md-icon slot="icon">settings</md-icon>
-    </md-fab>
-
-    <md-dialog id="settings-dialog" class="settings-dialog">
-      <div slot="headline">Settings</div>
-      <div slot="content">
-        <md-list>
-          <md-list-item type="button" id="settings-check-update">
-            <md-icon slot="start">refresh</md-icon>
-            <div slot="headline">Check for updates</div>
-            <div slot="supporting-text">v${APP_VERSION}</div>
-          </md-list-item>
-          <md-list-item type="button" id="settings-changelog">
-            <md-icon slot="start">campaign</md-icon>
-            <div slot="headline">Changelog</div>
-          </md-list-item>
-          <md-list-item type="button" id="settings-theme">
-            <md-icon slot="start">palette</md-icon>
-            <div slot="headline">Theme</div>
-            <div slot="supporting-text">${currentThemeKey}</div>
-          </md-list-item>
-          <md-list-item type="button" id="settings-share">
-            <md-icon slot="start">ios_share</md-icon>
-            <div slot="headline">Share app</div>
-          </md-list-item>
-          <md-list-item type="button" id="settings-other-apps">
-            <md-icon slot="start">apps</md-icon>
-            <div slot="headline">Other apps by me</div>
-          </md-list-item>
-          <md-list-item type="button" id="settings-github">
-            <md-icon slot="start">code</md-icon>
-            <div slot="headline">View source</div>
-            <div slot="supporting-text">github.com/zoop-dev/countly</div>
-          </md-list-item>
-          <md-list-item type="button" id="settings-clear-data">
-            <md-icon slot="start">delete_sweep</md-icon>
-            <div slot="headline">Clear all data</div>
-          </md-list-item>
-        </md-list>
-      </div>
-      <div slot="actions">
-        <md-text-button id="settings-close">Close</md-text-button>
-      </div>
-    </md-dialog>
   `
 
   initEventsList()
@@ -957,72 +904,21 @@ function updateAllCountdownTexts() {
 }
 
 function initSettings() {
-  const settingsFab = document.querySelector('#settings-fab')
-  const settingsDialog = document.querySelector('#settings-dialog')
-
-  settingsFab.addEventListener('click', () => settingsDialog.show())
-  document.querySelector('#settings-close').addEventListener('click', () => settingsDialog.close())
-
-  document.querySelector('#settings-check-update').addEventListener('click', async (e) => {
-    const item = e.currentTarget
-    item.classList.add('spinning')
-    let found = false
-    try {
-      found = await checkForUpdate()
-    } catch {
-      
-    }
-    setTimeout(() => item.classList.remove('spinning'), 600)
-    settingsDialog.close()
-    if (!found) showToast("you're on the latest version")
-  })
-
-  document.querySelector('#settings-changelog').addEventListener('click', () => {
-    settingsDialog.close()
-    showFullChangelog(CHANGELOG)
-  })
-
-  document.querySelector('#settings-theme').addEventListener('click', () => {
-    settingsDialog.close()
-    showThemePicker(THEMES, currentThemeKey, (key) => {
+  initSettingsMenu({
+    version: APP_VERSION,
+    changelog: CHANGELOG,
+    themes: THEMES,
+    themeKey: currentThemeKey,
+    themeStorageKey: THEME_KEY,
+    onThemeChange: (key) => {
       currentThemeKey = key
-      const supportingText = document.querySelector('#settings-theme div[slot="supporting-text"]')
-      if (supportingText) supportingText.textContent = key
-    }, THEME_KEY)
-  })
-
-  document.querySelector('#settings-share').addEventListener('click', async () => {
-    settingsDialog.close()
-    const shareData = { title: 'Countly', text: 'countdowns to birthdays, trips, and deadlines', url: location.origin }
-    if (navigator.share) {
-      try {
-        await navigator.share(shareData)
-      } catch {}
-    } else {
-      await navigator.clipboard.writeText(location.origin)
-      showToast('link copied')
-    }
-  })
-
-  document.querySelector('#settings-other-apps').addEventListener('click', () => {
-    settingsDialog.close()
-    showAppSwitcher()
-  })
-
-  document.querySelector('#settings-github').addEventListener('click', () => {
-    window.open('https://github.com/zoop-dev/countly', '_blank', 'noopener,noreferrer')
-  })
-
-  document.querySelector('#settings-clear-data').addEventListener('click', async () => {
-    const ok = await zkConfirm('This removes every countdown. This can\'t be undone.', {
-      title: 'Clear all data?',
-      confirmLabel: 'Clear',
-      destructive: true,
-    })
-    if (!ok) return
-    localStorage.removeItem(EVENTS_KEY)
-    settingsDialog.close()
-    renderEventsList()
-    showToast('cleared')
+    },
+    shareData: { title: 'Countly', text: 'countdowns to birthdays, trips, and deadlines', url: location.origin },
+    githubUrl: 'https://github.com/zoop-dev/countly',
+    onClearData: () => {
+      localStorage.removeItem(EVENTS_KEY)
+      renderEventsList()
+    },
+    clearDataMessage: "This removes every countdown. This can't be undone.",
   })
 }
