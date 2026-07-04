@@ -1,8 +1,13 @@
 
 
-export const APP_VERSION = '0.1.1'
+export const APP_VERSION = '0.1.2'
 
 export const CHANGELOG = [
+  {
+    version: '0.1.2',
+    date: '2026-07-03',
+    items: ['you can now skip straight past the install screen with a "continue without installing" link'],
+  },
   {
     version: '0.1.1',
     date: '2026-07-03',
